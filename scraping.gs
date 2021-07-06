@@ -26,7 +26,7 @@ var targetInfo = [
 
 // エラー文言
 var errorMessage = {
-  'httpAccess': 'アクセスエラー',
+  'httpRespons': 'アクセスエラー',
   'scraping'  : '該当する値なし',
   'initialCellBlank'  : urlCol + '列' + urlFirstRow + '行目より、URLを入力してください',
   'containsBlankCell' : '入力したURLに空白行が含まれています。空白行を削除してください',
@@ -40,14 +40,16 @@ var urlCount = urlRowValues.filter(String).length;
 var urlValues = sheet.getRange(urlCol + urlFirstRow + ':' + urlCol + (urlFirstRow + urlCount - 1)).getValues();
 // --------------------
 
-// ファイルを開いたとき、スクリプト実行ボタンをメニューに追加
+// -----スクリプト実行ボタン追加処理-----
 function onOpen() {
   let ui = SpreadsheetApp.getUi();
   let menu = ui.createMenu('スクリプト');
   menu.addItem('スクレイピング実行', 'scraping');
   menu.addToUi();
 }
+// -----------------------------------
 
+// -----スクレイピング-----
 function scraping() {
   inputCheck();
 
@@ -58,7 +60,15 @@ function scraping() {
     // 進行状況の表示
     SpreadsheetApp.getActiveSpreadsheet().toast((i+1) + '行目スクレイピング実施中');
 
-    let response = UrlFetchApp.fetch(urlValues[i]);
+    let response = getHttpResponsBody(urlValues[i]);
+
+    // HTTPレスポンスがエラーの場合、セルに該当項目を入力して終了
+    if(response == 'httpResponsError') {
+      for(let m=0;m<targetInfo.length;m++) {
+        sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue(errorMessage['httpRespons']);
+      }
+      return;
+    }
 
     for(let m=0;m<targetInfo.length;m++) {
       try {
@@ -67,9 +77,18 @@ function scraping() {
 
         sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue(result[1]);
       } catch (e) {
-        sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue('該当する値なし');
+        sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue(errorMessage['scraping']);
       }
     }
+  }
+}
+
+function getHttpResponsBody(url) {
+  try {
+    let httpResponsBody = UrlFetchApp.fetch(url);
+    return httpResponsBody;
+  } catch (e) {
+    return 'httpResponsError';
   }
 }
 
