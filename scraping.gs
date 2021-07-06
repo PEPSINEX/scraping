@@ -38,6 +38,8 @@ function onOpen() {
 
 function scraping() {
   for(let i=0;i<urls.length;i++) {
+    SpreadsheetApp.getActiveSpreadsheet().toast((i+1) + '行目スクレイピング実施中');
+
     let response = UrlFetchApp.fetch(urls[i]);
 
     for(let m=0;m<targetInfo.length;m++) {
