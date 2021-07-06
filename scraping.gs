@@ -1,4 +1,4 @@
-// 対象シート名
+// -----定数指定-----
 var targetSheetName = 'スクレイピング'; 
 
 // URL入力欄の最初のセルを定義
@@ -24,8 +24,21 @@ var targetInfo = [
   },
 ]
 
+// エラー文言
+var errorMessage = {
+  'httpAccess': 'アクセスエラー',
+  'scraping'  : '該当する値なし',
+  'initialCellBlank'  : urlCol + '列' + urlFirstRow + '行目より、URLを入力してください',
+  'containsBlankCell' : '入力したURLに空白行が含まれています。空白行を削除してください',
+}
+// --------------------
+
+// -----共通変数指定-----
 var sheet = SpreadsheetApp.getActive().getSheetByName(targetSheetName);
-var urls = sheet.getRange(urlCol + urlFirstRow + ':' + urlCol).getValues();
+var urlRowValues = sheet.getRange(urlCol + urlFirstRow + ':' + urlCol).getValues();
+var urlCount = urlRowValues.filter(String).length;
+var urlValues = sheet.getRange(urlCol + urlFirstRow + ':' + urlCol + (urlFirstRow + urlCount - 1)).getValues();
+// --------------------
 
 // ファイルを開いたとき、スクリプト実行ボタンをメニューに追加
 function onOpen() {
@@ -36,16 +49,16 @@ function onOpen() {
 }
 
 function scraping() {
-  inputUrlContainBlankRowCheck();
+  inputCheck();
 
-  for(let i=0;i<urls.length;i++) {
+  for(let i=0;i<urlValues.length;i++) {
     // URLが空欄であれば終了
-    if(urls[i] == '') {　return;　}
+    if(urlValues[i] == '') {　return;　}
 
     // 進行状況の表示
     SpreadsheetApp.getActiveSpreadsheet().toast((i+1) + '行目スクレイピング実施中');
 
-    let response = UrlFetchApp.fetch(urls[i]);
+    let response = UrlFetchApp.fetch(urlValues[i]);
 
     for(let m=0;m<targetInfo.length;m++) {
       try {
@@ -54,14 +67,33 @@ function scraping() {
 
         sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue(result[1]);
       } catch (e) {
-        sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue('なし');
+        sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue('該当する値なし');
       }
     }
   }
 }
 
-function inputUrlContainBlankRowCheck() {
-  if(urls.length !== urls.filter(String).length) {
-    throw new Error('入力したURLに空白行が含まれています。空白行を削除してください');
+// -----入力値チェック-----
+function inputCheck() {
+  initialCellExistCheck();
+  midwayBlankCellCheck();
+}
+
+function initialCellExistCheck() {
+  const initialCellRange = sheet.getRange(urlCol + urlFirstRow);
+
+  if(initialCellRange.isBlank()) {
+    throw new Error(errorMessage['initialCellBlank']);
   }
 }
+
+function midwayBlankCellCheck() {
+  const continuousLastCell = sheet.getRange(urlCol + urlFirstRow).getNextDataCell(SpreadsheetApp.Direction.DOWN).getA1Notation();
+  const continuousValues = sheet.getRange(urlCol + urlFirstRow + ':' + continuousLastCell).getValues();
+  const continuousCount = continuousValues.filter(String).length;
+
+  if(urlCount !== continuousCount) {
+    throw new Error(errorMessage['containsBlankCell']);
+  }
+}
+// --------------------
