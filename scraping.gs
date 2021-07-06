@@ -3,29 +3,29 @@ var targetSheetName = 'スクレイピング';
 
 // URL入力欄の最初のセルを定義
 var urlFirstRow = 2;
-var urlFirstcol = 'B';
+var urlCol = 'B';
 
 // スクレイピングで取得するデータと出力先を定義
 var targetInfo = [
   {
     'name'      : 'title',
     'regexp'    : '<title>(.*?)<\/title>',
-    'col'       : 3, // 出力先：C列
+    'col'       : 'C',
   },
   {
     'name'      : 'description',
     'regexp'    : '<meta name="description" content=(.*?)>',
-    'col'       : 4, // 出力先：D列
+    'col'       : 'D',
   },
   {
     'name'      : 'keywords',
     'regexp'    : '<meta name="keywords" content=(.*?)>',
-    'col'       : 5, // 出力先：E列
+    'col'       : 'E',
   },
 ]
 
 var sheet = SpreadsheetApp.getActive().getSheetByName(targetSheetName);
-var urls = sheet.getRange(urlFirstcol + urlFirstRow + ':' + urlFirstcol).getValues();
+var urls = sheet.getRange(urlCol + urlFirstRow + ':' + urlCol).getValues();
 
 // ファイルを開いたとき、スクリプト実行ボタンをメニューに追加
 function onOpen() {
@@ -36,8 +36,9 @@ function onOpen() {
 }
 
 function scraping() {
-  for(let i=0;i<urls.length;i++) {
+  inputUrlContainBlankRowCheck();
 
+  for(let i=0;i<urls.length;i++) {
     // URLが空欄であれば終了
     if(urls[i] == '') {　return;　}
 
@@ -51,10 +52,16 @@ function scraping() {
         let regexp = new RegExp(targetInfo[m]['regexp']);
         let result = response.getContentText().match(regexp);
 
-        sheet.getRange(i + urlFirstRow, targetInfo[m]['col']).setValue(result[1]);
+        sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue(result[1]);
       } catch (e) {
-        sheet.getRange(i + urlFirstRow, targetInfo[m]['col']).setValue('なし');
+        sheet.getRange(targetInfo[m]['col'] + (i + urlFirstRow)).setValue('なし');
       }
     }
+  }
+}
+
+function inputUrlContainBlankRowCheck() {
+  if(urls.length !== urls.filter(String).length) {
+    throw new Error('入力したURLに空白行が含まれています。空白行を削除してください');
   }
 }
