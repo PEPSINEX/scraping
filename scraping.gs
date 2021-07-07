@@ -26,10 +26,23 @@ var targetInfo = [
 // エラー文言
 var errorMessage = {
   'httpRespons': 'アクセスエラー',
-  'scraping'  : '該当する値なし',
+  'scraping'  : '該当値なし',
   'initialCellBlank'  : urlCol + '列' + dataInitialRow + '行目より、URLを入力してください',
   'containsBlankCell' : '入力したURLに空白行が含まれています。空白行を削除してください',
 }
+
+// 説明文言
+var description = [
+  '■使用方法・ツール概要',
+  '- URL入力後、上部メニュー「スクリプト⇒スクレイピング実行」を押下してください',
+  '- スクリプトが実行され、title, description, keywordsが自動出力されます',
+  '',
+  '■注意点',
+  '- 通信状況によりますが、1行につき2秒程度の時間がかかる場合があります',
+  '- URLはB列2行目から入力してください。その際、途中に空白行を入れないでください',
+  '- HTTPレスポンスエラーの際は「アクセスエラー」と出力されます',
+  '- ページの中に該当項目がない場合は「該当値なし」と出力されます',
+]
 // --------------------
 
 // -----共通変数指定-----
@@ -41,6 +54,7 @@ var urlValues = sheet.getRange(urlCol + dataInitialRow + ':' + urlCol + (dataIni
 
 // -----スクリプト実行ボタン追加処理-----
 function onOpen() {
+  Browser.msgBox(description.join('\\n'));
   let ui = SpreadsheetApp.getUi();
   let menu = ui.createMenu('スクリプト');
   menu.addItem('スクレイピング実行', 'main');
@@ -59,7 +73,7 @@ function scraping() {
   // URLごとの処理開始
   for(let i=0;i<urlValues.length;i++) {
     // URLが空欄であれば終了
-    if(urlValues[i] == '') {　return;　}
+    if(urlValues[i] == '') { return; }
 
     // 進行状況の表示
     SpreadsheetApp.getActiveSpreadsheet().toast((i+1) + '行目スクレイピング実施中');
@@ -84,6 +98,9 @@ function scraping() {
         sheet.getRange(targetInfo[m]['col'] + (i + dataInitialRow)).setValue(errorMessage['scraping']);
       }
     }
+
+    
+    Utilities.sleep(1000);
   }
 }
 
