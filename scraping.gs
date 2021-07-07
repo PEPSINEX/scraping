@@ -40,6 +40,7 @@ var description = [
   '■注意点',
   '- 通信状況によりますが、1行につき2秒程度の時間がかかる場合があります',
   '- URLはB列2行目から入力してください。その際、途中に空白行を入れないでください',
+  '- 1回のスクレイピングで入力するURLは、最大100件程度までとしてください。タイムアウトになる可能性があります',
   '- HTTPレスポンスエラーの際は「アクセスエラー」と出力されます',
   '- ページの中に該当項目がない場合は「該当値なし」と出力されます',
 ]
@@ -78,28 +79,21 @@ function scraping() {
     // 進行状況の表示
     SpreadsheetApp.getActiveSpreadsheet().toast((i+1) + '行目スクレイピング実施中');
 
-    // HTTPレスポンスの取得。取得エラー時は該当セルにメッセージを出力
+    // HTTPレスポンスの取得
     let response = getHttpResponsBody(urlValues[i]);
-    if(response == 'httpResponsError') {
+
+    // レスポンス取得状況に応じて処理を分岐
+    if(response == 'httpResponsError') {  
       for(let m=0;m<targetInfo.length;m++) {
         sheet.getRange(targetInfo[m]['col'] + (i + dataInitialRow)).setValue(errorMessage['httpRespons']);
       }
-      return;
-    }
-
-    // 必要な項目だけ抽出
-    for(let m=0;m<targetInfo.length;m++) {
-      try {
-        let regexp = new RegExp(targetInfo[m]['regexp']);
-        let result = response.getContentText().match(regexp);
-
-        sheet.getRange(targetInfo[m]['col'] + (i + dataInitialRow)).setValue(result[1]);
-      } catch (e) {
-        sheet.getRange(targetInfo[m]['col'] + (i + dataInitialRow)).setValue(errorMessage['scraping']);
+    }else {
+      for(let m=0;m<targetInfo.length;m++) {
+        let result = getMatchValue(response, targetInfo[m]['regexp']);
+        sheet.getRange(targetInfo[m]['col'] + (i + dataInitialRow)).setValue(result);
       }
     }
 
-    
     Utilities.sleep(1000);
   }
 }
@@ -110,6 +104,17 @@ function getHttpResponsBody(url) {
     return httpResponsBody;
   } catch (e) {
     return 'httpResponsError';
+  }
+}
+
+function getMatchValue(htmlText, targetRegexp) {
+  try {
+    let regexp = new RegExp(targetRegexp);
+    let matchValue = htmlText.getContentText().match(regexp);
+
+    return matchValue[1];
+  } catch (e) {
+    return errorMessage['scraping'];
   }
 }
 // --------------------
