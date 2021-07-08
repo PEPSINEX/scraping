@@ -36,6 +36,7 @@ var description = [
   '■使用方法・ツール概要',
   '- URL入力後、上部メニュー「スクリプト⇒スクレイピング実行」を押下してください',
   '- スクリプトが実行され、title, description, keywordsが自動出力されます',
+  '- 本文章を再表示する場合は、上部メニュー「スクリプト⇒説明文表示」を押下してください',
   '',
   '■注意点',
   '- 通信状況によりますが、1行につき2秒程度の時間がかかる場合があります',
@@ -55,19 +56,28 @@ var urlValues = sheet.getRange(urlCol + dataInitialRow + ':' + urlCol + (dataIni
 
 // -----スクリプト実行ボタン追加処理-----
 function onOpen() {
-  Browser.msgBox(description.join('\\n'));
+  displayDescription();
   let ui = SpreadsheetApp.getUi();
   let menu = ui.createMenu('スクリプト');
   menu.addItem('スクレイピング実行', 'main');
+  menu.addItem('説明文表示', 'displayDescription');
   menu.addToUi();
 }
 // -----------------------------------
 
+// -----説明文表示----
+function displayDescription() {
+  Browser.msgBox(description.join('\\n'));
+}
+// -----------------
+
+// -----スクリプトメイン処理-----
 function main() {
   inputCheck();
   resetResult();
   scraping();
 }
+// ---------------------------
 
 // -----スクレイピング処理-----
 function scraping() {
