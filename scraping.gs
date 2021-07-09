@@ -26,7 +26,7 @@ var targetInfo = [
 // エラー文言
 var errorMessage = {
   'httpRespons': 'アクセスエラー',
-  'scraping'  : '該当値なし',
+  'match'  : '該当値なし',
   'initialCellBlank'  : urlCol + '列' + dataInitialRow + '行目より、URLを入力してください',
   'containsBlankCell' : '入力したURLに空白行が含まれています。空白行を削除してください',
 }
@@ -36,14 +36,17 @@ var description = [
   '■使用方法・ツール概要',
   '- URL入力後、上部メニュー「スクリプト⇒スクレイピング実行」を押下してください',
   '- スクリプトが実行され、title, description, keywordsが自動出力されます',
-  '- 本文章を再表示する場合は、上部メニュー「スクリプト⇒説明文表示」を押下してください',
   '',
   '■注意点',
   '- 通信状況によりますが、1行につき2秒程度の時間がかかる場合があります',
   '- URLはB列2行目から入力してください。その際、途中に空白行を入れないでください',
-  '- 1回のスクレイピングで入力するURLは、最大100件程度までとしてください。タイムアウトになる可能性があります',
+  '- B列以外は基本的に変更しないでください。スクリプトに影響を与える場合があります',
+  '- 1回のスクレイピングで入力するURLは最大100件まで',
   '- HTTPレスポンスエラーの際は「アクセスエラー」と出力されます',
   '- ページの中に該当項目がない場合は「該当値なし」と出力されます',
+  '',
+  '■その他',
+  '- 本文章を再表示する場合は、上部メニュー「スクリプト⇒説明文表示」を押下してください',
 ]
 // --------------------
 
@@ -90,41 +93,63 @@ function scraping() {
     SpreadsheetApp.getActiveSpreadsheet().toast((i+1) + '行目スクレイピング実施中');
 
     // HTTPレスポンスの取得
-    let response = getHttpResponsBody(urlValues[i]);
+    let response = getHttpRespons(urlValues[i]);
 
     // レスポンス取得状況に応じて処理を分岐
-    if(response == 'httpResponsError') {  
+    if(response == 'httpResponsError') {
       for(let m=0;m<targetInfo.length;m++) {
         sheet.getRange(targetInfo[m]['col'] + (i + dataInitialRow)).setValue(errorMessage['httpRespons']);
       }
     }else {
+      let charset = getResponsCharset(response);
+
       for(let m=0;m<targetInfo.length;m++) {
-        let result = getMatchValue(response, targetInfo[m]['regexp']);
+        let result = getMatchValue(response, targetInfo[m]['regexp'], charset);
         sheet.getRange(targetInfo[m]['col'] + (i + dataInitialRow)).setValue(result);
       }
     }
 
+    // DOS攻撃対策
     Utilities.sleep(1000);
   }
 }
 
-function getHttpResponsBody(url) {
+function getHttpRespons(url) {
   try {
-    let httpResponsBody = UrlFetchApp.fetch(url);
-    return httpResponsBody;
+    let httpRespons = UrlFetchApp.fetch(url);
+    return httpRespons;
   } catch (e) {
     return 'httpResponsError';
   }
 }
 
-function getMatchValue(htmlText, targetRegexp) {
+function getResponsCharset(response) {
+  let charset = '';
+  try {
+    let responseCharset = response.getContentText().match(/charset=(.*?)>/gi)[0];
+
+    if(responseCharset.match(/UTF-8/gi)) {
+      charset = 'UTF-8';
+    }else if(responseCharset.match(/Shift_JIS/gi)) {
+      charset = 'Shift_JIS';
+    }else if(responseCharset.match(/euc-jp/gi)) {
+      charset = 'euc-jp';
+    }else {
+      charset = '';
+    }
+  } catch (e) {
+    charset = '';
+  }
+
+  return charset;
+}
+
+function getMatchValue(response, targetRegexp, charset) {
   try {
     let regexp = new RegExp(targetRegexp);
-    let matchValue = htmlText.getContentText().match(regexp);
-
-    return matchValue[1];
+    return response.getContentText(charset).match(regexp)[1];
   } catch (e) {
-    return errorMessage['scraping'];
+    return errorMessage['match'];
   }
 }
 // --------------------
